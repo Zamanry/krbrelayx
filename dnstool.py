@@ -30,6 +30,7 @@ import getpass
 import re
 import os
 import socket
+import ssl
 from struct import unpack, pack
 from impacket.structure import Structure
 from impacket.krb5.ccache import CCache
@@ -39,6 +40,7 @@ from impacket.krb5 import constants
 from ldap3 import NTLM, Server, Connection, ALL, LEVEL, BASE, MODIFY_DELETE, MODIFY_ADD, MODIFY_REPLACE, SASL, KERBEROS
 from lib.utils.kerberos import ldap_kerberos
 import ldap3
+from ldap3.utils.log import set_library_log_detail_level, OFF, ERROR, BASIC, PROTOCOL, NETWORK, EXTENDED
 from impacket.ldap import ldaptypes
 import dns.resolver
 import datetime
@@ -336,14 +338,15 @@ def main():
     #Main parameters
     #maingroup = parser.add_argument_group("Main options")
     parser.add_argument("host", type=str,metavar='HOSTNAME',help="Hostname/ip or ldap://host:port connection string to connect to")
-    parser.add_argument("--secure", help="Use LDAPS")
-    parser.add_argument("-u","--user",type=str,metavar='USERNAME',help="DOMAIN\\username for authentication.")
-    parser.add_argument("-p","--password",type=str,metavar='PASSWORD',help="Password or LM:NTLM hash, will prompt if not specified")
+    parser.add_argument("--secure", action='store_true', help="Use LDAPS")
+    parser.add_argument("-u","--user", metavar='USERNAME', help="DOMAIN\\username for authentication.")
+    parser.add_argument("-p","--password", metavar='PASSWORD', help="Password or LM:NTLM hash, will prompt if not specified")
     parser.add_argument("--forest", action='store_true', help="Search the ForestDnsZones instead of DomainDnsZones")
     parser.add_argument("--legacy", action='store_true', help="Search the System partition (legacy DNS storage)")
     parser.add_argument("--zone", help="Zone to search in (if different than the current domain)")
     parser.add_argument("--print-zones", action='store_true', help="Only query all zones on the DNS server, no other modifications are made")
     parser.add_argument("--tcp", action='store_true', help="use DNS over TCP")
+    parser.add_argument('--verbosity', default='BASIC', choices=['OFF', 'ERROR', 'BASIC', 'PROTOCOL', 'NETWORK', 'EXTENDED'], help='Log file LDAP verbosity level')
     parser.add_argument('-k', '--kerberos', action="store_true", help='Use Kerberos authentication. Grabs credentials from ccache file '
                         '(KRB5CCNAME) based on target parameters. If valid credentials '
                         'cannot be found, it will use the ones specified in the command '
@@ -371,6 +374,20 @@ def main():
 
     args = parser.parse_args()
 
+    # Configure ldap3 package verbosity level
+    if args.verbosity == 'ERROR':
+        set_library_log_detail_level(ERROR)
+    elif args.verbosity == 'BASIC':
+        set_library_log_detail_level(BASIC)
+    elif args.verbosity == 'PROTOCOL':
+        set_library_log_detail_level(PROTOCOL)
+    elif args.verbosity == 'NETWORK':
+        set_library_log_detail_level(NETWORK)
+    elif args.verbosity == 'EXTENDED':
+        set_library_log_detail_level(EXTENDED)
+    else:
+        set_library_log_detail_level(OFF)
+    
     #Prompt for password if not set
     authentication = None
     if not args.user or not '\\' in args.user:
