@@ -443,7 +443,7 @@ def main():
     else:
         s = Server(args.host, get_info=ALL)
     print_m('Connecting to host...')
-    c = Connection(s, user=args.user, password=args.password, authentication=authentication, sasl_mechanism=sasl_mech)
+    c = Connection(s, user=args.user, password=args.password, authentication=authentication, sasl_mechanism=sasl_mech, raise_exceptions=True)
     print_m('Binding to host')
     # perform the Bind operation
     if authentication == NTLM:
