@@ -336,6 +336,7 @@ def main():
     #Main parameters
     #maingroup = parser.add_argument_group("Main options")
     parser.add_argument("host", type=str,metavar='HOSTNAME',help="Hostname/ip or ldap://host:port connection string to connect to")
+    parser.add_argument("--secure", help="Use LDAPS")
     parser.add_argument("-u","--user",type=str,metavar='USERNAME',help="DOMAIN\\username for authentication.")
     parser.add_argument("-p","--password",type=str,metavar='PASSWORD',help="Password or LM:NTLM hash, will prompt if not specified")
     parser.add_argument("--forest", action='store_true', help="Search the ForestDnsZones instead of DomainDnsZones")
@@ -419,7 +420,11 @@ def main():
         sasl_mech = KERBEROS
 
     # define the server and the connection
-    s = Server(args.host, get_info=ALL)
+    if args.secure:
+        tls_config = ldap3.Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLS_CLIENT)
+        s = Server(args.host, use_ssl = True, tls=tls_config, get_info=ALL, port = 636)
+    else:
+        s = Server(args.host, get_info=ALL)
     print_m('Connecting to host...')
     c = Connection(s, user=args.user, password=args.password, authentication=authentication, sasl_mechanism=sasl_mech)
     print_m('Binding to host')
